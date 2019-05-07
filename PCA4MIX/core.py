@@ -8,11 +8,10 @@ from scipy.stats import zscore
 class PCA4MIX (object):
 
     def splitdata(self, input_dataframe):
-        """ Split dataframe to numerical and categorical dataframe
+        """Split dataframe to numerical and categorical dataframe
 
-        Args:
-            input_dataframe: pandas dataframe to be split
-        Returns:
+        :param input_dataframe: pandas dataframe to be split
+        :return:
             data_numeric: pandas dataframe with numerical variables
             data_category: pandas dataframe with categorical variables
         """
@@ -23,23 +22,28 @@ class PCA4MIX (object):
 
     def dataframe_recod(self, data_numeric, data_category):
         """Reconstruct dataframe to be used in pcamix.
-        Note that some returned values are for the purpose of inspection and will not be used in other function
-        Args:
-            data_numeric: pandas dataframe with numerical varialbes
-            data_category: pandas dataframe with categorical variables
-        Returns:
+        Note that some returned values are for the purpose of inspection and future development
+        :param data_numeric: pandas dataframe with numerical varialbes
+        :param data_category: pandas dataframe with categorical variables
+        :return:
             X: pandas dataframe numeric and category concatenate
             Y: pandas dataframe numeric and category indicator concatenate
-            Z: pandas dataframe standardized numeric and category indicator concatenate
-            W:
-            , n, p, p1, p2, g, s, indexj, indicator_matrix, category_cod, data_numeric, data_category, category_num
-
-
-
-
-
-
+            Z: pandas dataframe standardized numeric and category indicator centred and reduced concatenate
+            W: pandas dataframe standardized centred numeric and indicator matrix centred **will be used in pcamix()**
+            n: int number of rows
+            p: int number of columns
+            p1: int number of numerical columns
+            p2: int number of categorical columns
+            g: pandas dataframe Y column means
+            s: pandas dataframe Y column std
+            indexj: list column index of the whole reconstracted matrix
+            indicator_matrix: pandas dataframe indicator matrix category matrix
+            category_cod : pandas dataframe indicator matrix diveded by columns std
+            data_numeric : pandas dataframe numerical data matrix
+            data_category : pandas dataframe categorical data matrix
+            category_num : pandas dataframe number of categories
         """
+
         #num of rows and columns, std and mean of columns, zscores of numeric matrix
         n1 = len(data_numeric.index)
         p1 = len(data_numeric.columns)
@@ -79,9 +83,18 @@ class PCA4MIX (object):
             raise Exception("Unequal rows of numerical and categorical dataframe")
         return X, Y, Z, W, n, p, p1, p2, g, s, indexj, indicator_matrix, category_cod, data_numeric, data_category, category_num
 
-    #Generalized sigular value decomposition
     def gsvd(self, W, N, Mcol):
-        ncp = len(W.columns) # placeholder for chose number of PCs
+        """Performs generalized singular value decomposition
+        :param W: pandas dataframe standardized centred numeric and indicator matrix centred
+        :param N: pandas dataframe weights of rows
+        :param Mcol: pandas dataframe weights of columns
+        :return:
+            U: numpy matrix left singular vectors of W
+            S: list singular values of W
+            V: numpy matrix right singular vectors of W
+        """
+
+        #ncp = len(W.columns)
         #build matrix for GSVD
         roweight = N / N.sum(axis=1).values[0]
         W = W.mul(Mcol.apply(np.sqrt).values, axis=1)
@@ -108,6 +121,17 @@ class PCA4MIX (object):
         return U, S, V
 
     def pcamix(self, data_numeric, data_category):
+        """Performs principal component analysis for dataset with mixed datatype
+        :param data_numeric: pandas dataframe with all numerical variables
+        :param data_category: pandas dataframe with all categorical variables
+        :return:
+            eigDF: pandas dataframe eigenvalues, proportion and cumulative of principal components
+            U: pandas dataframe standardized principal component scores
+            F: pandas dataframe principal component scores
+            Sqloadings: pandas dataframe squared loadings
+            ReContriPct: pandas dataframe relative contributions in percent for variables in each principal components
+            CoefMatrix: coefficients for the linear combination of principal components
+        """
         X, Y, Z, W, n, p, p1, p2, g, s, indexj, indicator_matrix, category_cod, data_numeric, data_category, category_num = self.dataframe_recod(data_numeric,data_category)
         #construct weight dataframe
         columnames = data_numeric.columns.values.tolist() + indicator_matrix.columns.values.tolist()
@@ -168,3 +192,4 @@ class PCA4MIX (object):
         CoefMatrix = pd.concat([CoefConst, Coef])
 
         return eigDF, U, F, Sqloadings, ReContriPct, CoefMatrix
+
